@@ -126,7 +126,7 @@ const broadcastLatest = (): void => {
 };
 
 const connectToPeers = (newPeer: string): void => {
-    const ws: WebSocket = new WebSocket(newPeer);
+    const ws: WebSocket = new WebSocket("ws://localhost:6001/"+newPeer);
     ws.on('open', () => {
         initConnection(ws);
     });
