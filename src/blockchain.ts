@@ -1,4 +1,5 @@
 import { calculateHash } from './utils';
+import { broadcastLatest} from './peer2peer';
 
 class Block {
     public index: number;
@@ -19,7 +20,7 @@ class Block {
         this.difficulty = difficulty;
     }
 
-}
+};
 
 const getCurrentTimestamp = (): number => Math.round(new Date().getTime() / 1000);
 
@@ -37,7 +38,7 @@ const generateNextBlock = (blockData: string) => {
     const newBlock = new Block(nextIndex, nextTimestamp, hash, previousBlock.hash, blockData, 0, 0 /*TODO*/);
 
     return newBlock;
-}
+};
 
 const isValidBlockStructure = (newBlock: Block): boolean => {
     return typeof newBlock.index === 'number'
@@ -45,7 +46,7 @@ const isValidBlockStructure = (newBlock: Block): boolean => {
         && typeof newBlock.timestamp === 'number'
         && typeof newBlock.hash === 'string'
         && typeof newBlock.previousHash === 'string';
-}
+};
 
 const isValidNewBlock = (newBlock: Block, previousBlock: Block): boolean => {
     if (!isValidBlockStructure(newBlock)) {
@@ -60,12 +61,16 @@ const isValidNewBlock = (newBlock: Block, previousBlock: Block): boolean => {
         console.log('hash different of previous block hash');
         return false;
     }
+    if(!isValidTimestamp(newBlock, previousBlock)){
+        console.log('Timestamp not valid');
+        return false;
+    }
     if(calculateHash(newBlock.index, newBlock.timestamp, newBlock.previousHash, newBlock.data) != newBlock.hash){
         console.log('invalid hash');
         return false;
     }
     return true;
-}
+};
 
 const isValidChain = (chainToValidate: Block[]): boolean => {
     //We validate first if the first block is the genesis block
@@ -82,20 +87,20 @@ const isValidChain = (chainToValidate: Block[]): boolean => {
         }
     }
     return true;
-}
+};
 
 const getLatestBlock = () => { return blockchain[blockchain.length - 1];}
 
 const replaceChain = (newBlocks: Block[]) => {
-    if(isValidChain(newBlocks) && newBlocks.length > blockchain.length){
+    if(isValidChain(newBlocks) && getAccumulatedDifficulty(newBlocks) > getAccumulatedDifficulty(blockchain)){
         console.log('Received blockchain is valid. Replacing current blockchiain with the one received');
         blockchain = newBlocks;
-        //broadcastNewBlokchain
+        broadcastLatest();
     }
     else{
         console.log('Received blockchain is not valid');
     }
-}
+};
 
 const addBlockToChain = (newBlock: Block) =>{
     if(isValidNewBlock(newBlock, getLatestBlock())){
@@ -103,6 +108,17 @@ const addBlockToChain = (newBlock: Block) =>{
         return true;
     }
     return false;
+};
+
+const isValidTimestamp = (newBlock: Block, previousBlock: Block): boolean => {
+    return previousBlock.timestamp - 60 < newBlock.timestamp
+        && newBlock.timestamp - 60 < getCurrentTimestamp();
+};
+
+const getAccumulatedDifficulty = (aBlockchain: Block[]): number => {
+    return aBlockchain.map((block) => block.difficulty)
+                      .map((difficulty) => Math.pow(2, difficulty))
+                      .reduce((a, b) => a + b);
 }
 
 export {
